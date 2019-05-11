@@ -39,17 +39,19 @@ def empty_cell_energy_gained(game, cell):
 # Returns gold gained after game ends empty cell
 def empty_cell_gold_gained(game, cell):
     if cell.owner == 0:
-        return cell.natural_gold * (500 - game.turn)
+        return cell.natural_gold * (100 - game.turn)
     else:
         return None
 
+def energy_ratio(game, cell):
+    return cell.natural_energy/cell.natural_cost
 
 # Returns ratio of energy
 def empty_cell_value(game, cell):
     if cell.owner == 0:
         total_energy = empty_cell_energy_gained(game, cell)
         total_gold = empty_cell_gold_gained(game, cell)
-        return total_energy + total_gold
+        return total_energy*2 + total_gold
 
     else:
         return None
