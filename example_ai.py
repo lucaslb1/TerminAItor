@@ -1,13 +1,13 @@
 from colorfight import Colorfight
 import time
 import random
-from colorfight.constants import BLD_GOLD_MINE, BLD_ENERGY_WELL, BLD_FORTRESS
+from colorfight.constants import BLD_GOLD_MINE, BLD_ENERGY_WELL, BLD_FORTRESS, BLD_HOME
 
 game = Colorfight()
 
 game.connect(room = 'test_room2')
 
-if game.register(username = 'hAiry', password = "potter"):
+if game.register(username = 'Remember_the_name', password = "potter"):
     # This is the game loop
 
     while True:
@@ -28,10 +28,21 @@ if game.register(username = 'hAiry', password = "potter"):
             continue
 
         me = game.me
-
+        # find the best cells to attack
         best_cells = []
-        #find the best cells
         for cell in game.me.cells.values():
+            if cell.building.is_home and cell.building.level == 1 and me.gold > 1000 and me.energy > 1000:
+                cmd_list.append(game.upgrade(cell.position))
+                print("We upgrade {} on ({}, {})".format("HOME", cell.position.x, cell.position.y))
+                me.gold -= 1000
+                me.energy -= 1000
+
+            elif cell.building.is_home and cell.building.level == 2 and me.gold > 2000 and me.energy > 2000:
+                cmd_list.append(game.upgrade(cell.position))
+                print("We upgrade {} on ({}, {})".format("HOME", cell.position.x, cell.position.y))
+                me.gold -= 2000
+                me.energy -= 2000
+
             # Check the surrounding position
             for pos in cell.position.get_surrounding_cardinals():
                 # Finds valid cells
@@ -43,7 +54,6 @@ if game.register(username = 'hAiry', password = "potter"):
                         best_cells.append(a_cell_pair)
 
         best_cells.sort(key=lambda X: X[1], reverse=True)
-        print(best_cells)
         for pair in best_cells:
             c = game.game_map[pair[0]]
 
@@ -54,26 +64,51 @@ if game.register(username = 'hAiry', password = "potter"):
             # the same cell
             if c.position not in my_attack_list:
                 cmd_list.append(game.attack(pair[0], c.attack_cost))
-                print("We are attacking ({}, {}) Value({})".format(pair[0].x, pair[0].y, pair[1]))
+                print("We are attacking ({}, {}) Value({})".format(pair[0].x, pair[0].y, pair[1]), end ='')
                 game.me.energy -= c.attack_cost
                 my_attack_list.append(c.position)
-
+        print("")
         # game.me.cells is a dict, where the keys are Position and the values
         # are MapCell. Get all my cells.
 
-        best_build_cells = sorted(game.me.cells.values(), key=lambda X: X.natural_energy+X.natural_gold, reverse=True)
+        lvl_one_buildings = []
+        lvl_two_buildings = []
+        for cell in game.me.cells.values():
+            if cell.building is not None and cell.building != "home" and cell.building.level == 1:
+                lvl_one_buildings.append(cell)
+            elif cell.building is not None and cell.building != "home" and cell.building.level == 2:
+                lvl_two_buildings.append(cell)
+
+        best_lvl_one_buildings = sorted(lvl_one_buildings, key=lambda X: X.natural_energy+X.natural_gold, reverse=True)
+        best_lvl_two_buildings = sorted(lvl_two_buildings, key=lambda X: X.natural_energy+X.natural_gold, reverse=True)
+
+        for cell in best_lvl_one_buildings:
+            if me.gold > 200:
+                cmd_list.append(game.upgrade(cell.position))
+                print("We upgrade {} on ({}, {})".format(cell.building, cell.position.x, cell.position.y),end='')
+                me.gold -= 200
+        print("")
+
+        for cell in best_lvl_two_buildings:
+            if me.gold > 300:
+                cmd_list.append(game.upgrade(cell.position))
+                print("We upgrade {} on ({}, {})".format(cell.building, cell.position.x, cell.position.y),end='')
+                me.gold -= 300
+        print("")
+
+        best_build_cells = sorted(game.me.cells.values(), key=lambda X: X.natural_energy + X.natural_gold, reverse=True)
 
         for cell in best_build_cells:
-            if me.gold>100 and cell.building.is_empty:
-                if cell.natural_gold>(cell.natural_energy+1):
+            if me.gold > 100 and cell.building.is_empty:
+                if cell.natural_gold > (cell.natural_energy + 1):
                     cmd_list.append(game.build(cell.position, BLD_GOLD_MINE))
-                    print("We build {} on ({}, {})".format("GOLD MINE", cell.position.x, cell.position.y))
+                    print("We build {} on ({}, {})".format("GOLD MINE", cell.position.x, cell.position.y), end='')
                     me.gold -= 100
                 else:
                     cmd_list.append(game.build(cell.position, BLD_ENERGY_WELL))
-                    print("We build {} on ({}, {})".format("ENERGY WELL", cell.position.x, cell.position.y))
+                    print("We build {} on ({}, {})".format("ENERGY WELL", cell.position.x, cell.position.y), end='')
                     me.gold -= 100
-
+        print("")
         # Send the command list to the server
         result = game.send_cmd(cmd_list)
         print(result)
